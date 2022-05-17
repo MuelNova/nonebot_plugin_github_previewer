@@ -38,27 +38,26 @@ class Github(object):
             }
         }
         """
-        url = "https://api.github.com/repos/{}/{}".format(owner, repo)
+        url = f"https://api.github.com/repos/{owner}/{repo}"
         try:
             async with aiohttp.ClientSession(headers=self.headers, **kwargs) as session:
                 async with session.get(url) as r:
-                    if r.status == 200:
-                        resp = await r.json()
-                        repo_info = {
-                            "name": resp.get("name"),
-                            "description": resp.get("description"),
-                            "owner": resp.get("owner", {}).get("login"),
-                            "avatar": resp.get("owner", {}).get("avatar_url"),
-                            "stars": resp.get("stargazers_count"),
-                            "watchers": resp.get("subscribers_count"),
-                            "forks": resp.get("forks"),
-                            "license": resp.get("license", {}).get("spdx_id")
-                        }
-                        return {'success': True, 'data': repo_info}
-                    else:
+                    if r.status != 200:
                         return {'success': False, 'data': {"status": str(r.status),
                                                            "message": error_message.get(str(r.status),
                                                                                         'Unknown Error!\n')}}
+                    resp = await r.json()
+                    repo_info = {
+                        "name": resp.get("name"),
+                        "description": resp.get("description"),
+                        "owner": resp.get("owner", {}).get("login"),
+                        "avatar": resp.get("owner", {}).get("avatar_url"),
+                        "stars": resp.get("stargazers_count"),
+                        "watchers": resp.get("subscribers_count"),
+                        "forks": resp.get("forks"),
+                        "license": resp.get("license", {}).get("spdx_id")
+                    }
+                    return {'success': True, 'data': repo_info}
         except Exception as e:
             return {'success': False, 'data': {"status": e,
                                                "message": e}}
@@ -130,7 +129,7 @@ class Github(object):
         :return:
         """
         x = img_width
-        r = int(x / 2)
+        r = x // 2
 
         img_return = Image.new('RGBA', (x, x), (255, 255, 255, 0))
         img_white = Image.new('RGBA', (x, x), (255, 255, 255, 0))
@@ -140,8 +139,8 @@ class Github(object):
         p_white = img_white.load()
 
         for i in range(x):
+            lx = abs(i - r)
             for j in range(x):
-                lx = abs(i - r)
                 ly = abs(j - r)
                 l = (pow(lx, 2) + pow(ly, 2)) ** 0.5
                 if l < r:

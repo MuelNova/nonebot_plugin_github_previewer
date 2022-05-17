@@ -21,7 +21,7 @@ async def _(bot: Bot, event: Event, state: T_State):
         buf = BytesIO()
         img.save(buf, format='PNG')
         base64_str = base64.b64encode(buf.getvalue()).decode()
-        await github_preview.finish(MessageSegment.image('base64://' + base64_str))
+        await github_preview.finish(MessageSegment.image(f'base64://{base64_str}'))
     else:
         logger.error('API WRONG')
 
