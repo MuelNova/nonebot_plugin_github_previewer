@@ -4,6 +4,7 @@ from typing import Dict
 
 import aiohttp
 from PIL import Image, ImageDraw, ImageFont
+from wcwidth import wcwidth
 
 error_message = {
     "404": '404 Not Found!'
@@ -79,7 +80,7 @@ class Github(object):
         font_path = path / "fonts"
         name_font = ImageFont.truetype(str(font_path / "msyh.ttc"), 25)
         repo_font = ImageFont.truetype(str(font_path / "msyhbd.ttc"), 30)
-        desc_font = ImageFont.truetype(str(font_path / "msyh.ttc"), 15)
+        desc_font = ImageFont.truetype(str(font_path / "msyh.ttc"), 20)
         count_font = ImageFont.truetype(str(font_path / "msyhbd.ttc"), 20)
         draw.text((50, 50), repo_info['owner'] + "/", fill=(50, 50, 50, 255), font=name_font)
         draw.text((50, 80), repo_info['name'], fill=(0, 0, 0, 255), font=repo_font)
@@ -92,10 +93,10 @@ class Github(object):
 
                 length = len(repo_info['description']) // cutter
                 line_text = repo_info['description'][i * length:(i + 1) * length].strip()
-                draw.text((50, 120 + 25 * i), line_text, fill=(100, 100, 100, 255), font=desc_font)
+                draw.text((50, 130 + 30 * i), self.line_break(line_text), fill=(100, 100, 100, 255), font=desc_font)
                 if i == cutter - 1:
-                    line_text = repo_info['description'][(i + 1) * length:].strip()
-                    draw.text((50, 120 + 25 * (i + 1)), line_text, fill=(100, 100, 100, 255), font=desc_font)
+                    line_text2 = repo_info['description'][(i + 1) * length:].strip()
+                    draw.text((50, 130 + 30 * (i + len(self.line_break(line_text)))), line_text2, fill=(100, 100, 100, 255), font=desc_font)
         else:
             draw.text((50, 120), repo_info['description'], fill=(100, 100, 100, 255), font=desc_font)
 
@@ -104,7 +105,7 @@ class Github(object):
 
         avatar = await self.get_url_pic(repo_info['avatar'])
         avatar = avatar.resize((125, 125), Image.ANTIALIAS)
-        avatar = self.img_circle(avatar, 125)
+        avatar = avatar.convert('RGBA')
         _, _, _, a = avatar.split()
         im.paste(avatar, (600, 60), mask=a)
         return im
@@ -129,23 +130,53 @@ class Github(object):
         :param img_width: int, 图片宽度
         :return:
         """
-        x = img_width
-        r = int(x / 2)
+        # x = img_width
+        # r = int(x / 2)
 
-        img_return = Image.new('RGBA', (x, x), (255, 255, 255, 0))
-        img_white = Image.new('RGBA', (x, x), (255, 255, 255, 0))
+        # img_return = Image.new('RGBA', (x, x), (255, 255, 255, 0))
+        # img_white = Image.new('RGBA', (x, x), (255, 255, 255, 0))
 
-        p_src = img.load()
-        p_return = img_return.load()
-        p_white = img_white.load()
+        # p_src = img.load()
+        # p_return = img_return.load()
+        # p_white = img_white.load()
 
-        for i in range(x):
-            for j in range(x):
-                lx = abs(i - r)
-                ly = abs(j - r)
-                l = (pow(lx, 2) + pow(ly, 2)) ** 0.5
-                if l < r:
-                    p_return[i, j] = p_src[i, j]
-                if l > r:
-                    p_return[i, j] = p_white[i, j]
-        return img_return
+        # for i in range(x):
+        #     for j in range(x):
+        #         lx = abs(i - r)
+        #         ly = abs(j - r)
+        #         l = (pow(lx, 2) + pow(ly, 2)) ** 0.5
+        #         if l < r:
+        #             p_return[i, j] = p_src[i, j]
+        #         if l > r:
+        #             p_return[i, j] = p_white[i, j]
+        # return img_return
+        return img
+
+    def line_break(self, line):
+        ret = ''
+        width = 0
+        for c in line:
+            if len(c.encode('utf8')) == 3:  # 中文
+                if 70 == width + 1:  # 剩余位置不够一个汉字
+                    width = 2
+                    ret += '\n' + c
+                else: # 中文宽度加2，注意换行边界
+                    width += 2
+                    ret += c
+            else:
+                if c == '\t':
+                    space_c = 4 - width % 4
+                    ret += ' ' * space_c
+                    width += space_c
+                elif c == '\n':
+                    width = 0
+                    ret += c
+                else:
+                    width += 1
+                    ret += c
+            if width >= 70:
+                ret += '\n'
+                width = 0
+        if ret.endswith('\n'):
+            return ret
+        return ret + '\n'
